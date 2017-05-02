@@ -8,5 +8,5 @@ fi
 
 cp iam-login-service/target/iam-login-service.war rpm/SOURCES/
 
-rpmbuild --buildroot=rpm/ --define "_basedir `pwd`" -bb rpm/SPECS/iam-login-service.spec
+rpmbuild --define "_basedir `pwd`" -bb rpm/SPECS/iam-login-service.spec
 
