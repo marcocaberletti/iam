@@ -3,6 +3,7 @@ package it.infn.mw.iam.test.notification;
 import static it.infn.mw.iam.test.RegistrationUtils.confirmRegistrationRequest;
 import static it.infn.mw.iam.test.RegistrationUtils.createRegistrationRequest;
 import static it.infn.mw.iam.test.RegistrationUtils.deleteUser;
+import static it.infn.mw.iam.test.TestUtils.waitIfPortIsUsed;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -84,7 +85,9 @@ public class NotificationTests {
   }
 
   @Before
-  public void setUp() {
+  public void setUp() throws InterruptedException {
+    waitIfPortIsUsed(mailHost, mailPort, 30);
+
     wiser = new Wiser();
     wiser.setHostname(mailHost);
     wiser.setPort(mailPort);
@@ -94,7 +97,6 @@ public class NotificationTests {
   @After
   public void tearDown() throws InterruptedException {
     wiser.stop();
-    Thread.sleep(1000L);
 
     notificationRepository.deleteAll();
   }

@@ -1,9 +1,0 @@
-## default
-etc/default/iam-login-service
-
-## systemd unit
-lib/systemd/system/iam-login-service.service
-
-## others
-var/lib/indigo/iam-login-service/iam-login-service.war
-
