@@ -54,7 +54,7 @@ public class MailHealthEndpointsTests {
   private MockMvc mvc;
   private Wiser wiser;
 
-  private int timeout = 30;
+  private int timeoutInSecs = 30;
 
   @Before
   public void setup() throws InterruptedException {
@@ -63,7 +63,7 @@ public class MailHealthEndpointsTests {
       .alwaysDo(print())
       .build();
 
-    waitIfPortIsUsed(mailHost, mailPort, timeout);
+    waitIfPortIsUsed(mailHost, mailPort, timeoutInSecs);
 
     wiser = new Wiser();
     wiser.setHostname(mailHost);

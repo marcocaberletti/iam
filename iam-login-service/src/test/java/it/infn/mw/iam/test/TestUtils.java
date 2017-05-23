@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import org.springframework.http.HttpStatus;
 
@@ -207,7 +208,7 @@ public class TestUtils {
     return new AccessTokenGetter(clientId, clientSecret).grantType("password");
   }
 
-  public static void waitIfPortIsUsed(String host, int port, int timeout)
+  public static void waitIfPortIsUsed(String host, int port, int timeoutInSecs)
       throws InterruptedException {
     boolean result = true;
     int sleeped = 0;
@@ -216,15 +217,15 @@ public class TestUtils {
       try {
         (new Socket(host, port)).close();
         out.println(format("Port %s already used", port));
-        sleep(1000L);
-        sleeped += 1;
+        sleep(TimeUnit.SECONDS.toMillis(1));
+        sleeped++;
         result = true;
       } catch (IOException e) {
         result = false;
       }
-    } while (result && sleeped < timeout);
+    } while (result && sleeped < timeoutInSecs);
 
-    if (sleeped >= timeout) {
+    if (sleeped >= timeoutInSecs) {
       fail("Timeout waiting for port available");
     }
   }
