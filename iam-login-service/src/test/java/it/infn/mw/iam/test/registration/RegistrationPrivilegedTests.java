@@ -37,7 +37,6 @@ import it.infn.mw.iam.core.IamRegistrationRequestStatus;
 import it.infn.mw.iam.registration.PersistentUUIDTokenGenerator;
 import it.infn.mw.iam.registration.RegistrationRequestDto;
 import it.infn.mw.iam.test.core.CoreControllerTestSupport;
-import it.infn.mw.iam.test.util.JacksonUtils;
 import it.infn.mw.iam.test.util.WithMockOAuthUser;
 
 @RunWith(SpringJUnit4ClassRunner.class)
@@ -52,8 +51,10 @@ public class RegistrationPrivilegedTests {
   @Autowired
   private PersistentUUIDTokenGenerator generator;
 
-  private MockMvc mvc;
+  @Autowired
   private ObjectMapper objectMapper;
+
+  private MockMvc mvc;
 
   @Before
   public void setup() {
@@ -61,7 +62,6 @@ public class RegistrationPrivilegedTests {
       .apply(springSecurity())
       .alwaysDo(print())
       .build();
-    objectMapper = JacksonUtils.createJacksonObjectMapper();
   }
 
   @Test
@@ -99,7 +99,6 @@ public class RegistrationPrivilegedTests {
       .andExpect(jsonPath("$", hasSize(2)));
     // @formatter:on
   }
-
 
   @Test
   @WithMockOAuthUser(clientId = "registration-client", scopes = {"registration:read"})

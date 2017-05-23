@@ -36,7 +36,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import it.infn.mw.iam.IamLoginService;
 import it.infn.mw.iam.registration.PersistentUUIDTokenGenerator;
 import it.infn.mw.iam.registration.RegistrationRequestDto;
-import it.infn.mw.iam.test.util.JacksonUtils;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @SpringApplicationConfiguration(classes = {IamLoginService.class})
@@ -50,8 +49,10 @@ public class RegistrationUnprivilegedTests {
   @Autowired
   private PersistentUUIDTokenGenerator generator;
 
-  private MockMvc mvc;
+  @Autowired
   private ObjectMapper objectMapper;
+
+  private MockMvc mvc;
 
   @Before
   public void setup() {
@@ -59,7 +60,6 @@ public class RegistrationUnprivilegedTests {
       .apply(springSecurity())
       .alwaysDo(print())
       .build();
-    objectMapper = JacksonUtils.createJacksonObjectMapper();
   }
 
   @Test
