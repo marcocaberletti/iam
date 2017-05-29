@@ -12,6 +12,7 @@ import java.util.Collections;
 
 import it.infn.mw.iam.api.scim.updater.AccountUpdater;
 import it.infn.mw.iam.api.scim.updater.DefaultAccountUpdater;
+import it.infn.mw.iam.audit.events.account.AccountUpdatedEvent;
 import it.infn.mw.iam.persistence.model.IamAccount;
 import it.infn.mw.iam.persistence.model.IamGroup;
 import it.infn.mw.iam.persistence.model.IamOidcId;
@@ -29,37 +30,37 @@ public class Removers extends AccountBuilderSupport {
 
   public AccountUpdater oidcId(Collection<IamOidcId> toBeRemoved) {
 
-    return new DefaultAccountUpdater<Collection<IamOidcId>>(account, ACCOUNT_REMOVE_OIDC_ID, account::unlinkOidcIds,
+    return new DefaultAccountUpdater<Collection<IamOidcId>, AccountUpdatedEvent>(account, ACCOUNT_REMOVE_OIDC_ID, account::unlinkOidcIds,
         toBeRemoved, i -> !Collections.disjoint(account.getOidcIds(), i));
   }
 
   public AccountUpdater samlId(Collection<IamSamlId> toBeRemoved) {
 
-    return new DefaultAccountUpdater<Collection<IamSamlId>>(account, ACCOUNT_REMOVE_SAML_ID, account::unlinkSamlIds,
+    return new DefaultAccountUpdater<Collection<IamSamlId>, AccountUpdatedEvent>(account, ACCOUNT_REMOVE_SAML_ID, account::unlinkSamlIds,
         toBeRemoved, i -> !Collections.disjoint(account.getSamlIds(), i));
   }
 
   public AccountUpdater sshKey(Collection<IamSshKey> toBeRemoved) {
 
-    return new DefaultAccountUpdater<Collection<IamSshKey>>(account, ACCOUNT_REMOVE_SSH_KEY, account::unlinkSshKeys,
+    return new DefaultAccountUpdater<Collection<IamSshKey>, AccountUpdatedEvent>(account, ACCOUNT_REMOVE_SSH_KEY, account::unlinkSshKeys,
         toBeRemoved, i -> !Collections.disjoint(account.getSshKeys(), i));
   }
 
   public AccountUpdater x509Certificate(Collection<IamX509Certificate> toBeRemoved) {
 
-    return new DefaultAccountUpdater<Collection<IamX509Certificate>>(account, ACCOUNT_REMOVE_X509_CERTIFICATE,
+    return new DefaultAccountUpdater<Collection<IamX509Certificate>, AccountUpdatedEvent>(account, ACCOUNT_REMOVE_X509_CERTIFICATE,
         account::unlinkX509Certificates, toBeRemoved,
         i -> !Collections.disjoint(account.getX509Certificates(), i));
   }
 
   public AccountUpdater group(Collection<IamGroup> toBeRemoved) {
 
-    return new DefaultAccountUpdater<Collection<IamGroup>>(account, ACCOUNT_REMOVE_GROUP_MEMBERSHIP, account::unlinkMembers,
+    return new DefaultAccountUpdater<Collection<IamGroup>, AccountUpdatedEvent>(account, ACCOUNT_REMOVE_GROUP_MEMBERSHIP, account::unlinkMembers,
         toBeRemoved, i -> !Collections.disjoint(account.getGroups(), i));
   }
 
   public AccountUpdater picture(String picture) {
     final IamUserInfo ui = account.getUserInfo();
-    return new DefaultAccountUpdater<String>(account, ACCOUNT_REMOVE_PICTURE, ui::getPicture, ui::setPicture, null);
+    return new DefaultAccountUpdater<String, AccountUpdatedEvent>(account, ACCOUNT_REMOVE_PICTURE, ui::getPicture, ui::setPicture, null);
   }
 }

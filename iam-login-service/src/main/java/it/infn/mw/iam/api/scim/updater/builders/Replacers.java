@@ -18,6 +18,7 @@ import it.infn.mw.iam.api.scim.updater.AccountUpdater;
 import it.infn.mw.iam.api.scim.updater.DefaultAccountUpdater;
 import it.infn.mw.iam.api.scim.updater.util.AccountFinder;
 import it.infn.mw.iam.api.scim.updater.util.IdNotBoundChecker;
+import it.infn.mw.iam.audit.events.account.AccountUpdatedEvent;
 import it.infn.mw.iam.persistence.model.IamAccount;
 import it.infn.mw.iam.persistence.model.IamUserInfo;
 import it.infn.mw.iam.persistence.repository.IamAccountRepository;
@@ -70,20 +71,20 @@ public class Replacers extends AccountBuilderSupport {
   public AccountUpdater givenName(String givenName) {
 
     IamUserInfo ui = account.getUserInfo();
-    return new DefaultAccountUpdater<String>(account, ACCOUNT_REPLACE_GIVEN_NAME, ui::getGivenName,
+    return new DefaultAccountUpdater<String, AccountUpdatedEvent>(account, ACCOUNT_REPLACE_GIVEN_NAME, ui::getGivenName,
         ui::setGivenName, givenName);
   }
 
   public AccountUpdater familyName(String familyName) {
     final IamUserInfo ui = account.getUserInfo();
-    return new DefaultAccountUpdater<String>(account, ACCOUNT_REPLACE_FAMILY_NAME, ui::getFamilyName,
+    return new DefaultAccountUpdater<String, AccountUpdatedEvent>(account, ACCOUNT_REPLACE_FAMILY_NAME, ui::getFamilyName,
         ui::setFamilyName, familyName);
   }
 
   public AccountUpdater picture(String newPicture) {
 
     final IamUserInfo ui = account.getUserInfo();
-    return new DefaultAccountUpdater<String>(account, ACCOUNT_REPLACE_PICTURE, ui::getPicture, ui::setPicture,
+    return new DefaultAccountUpdater<String,AccountUpdatedEvent>(account, ACCOUNT_REPLACE_PICTURE, ui::getPicture, ui::setPicture,
         newPicture);
 
   }
@@ -91,24 +92,24 @@ public class Replacers extends AccountBuilderSupport {
   public AccountUpdater email(String email) {
     final IamUserInfo ui = account.getUserInfo();
 
-    return new DefaultAccountUpdater<String>(account, ACCOUNT_REPLACE_EMAIL, ui::setEmail, email, emailAddChecks);
+    return new DefaultAccountUpdater<String,AccountUpdatedEvent>(account, ACCOUNT_REPLACE_EMAIL, ui::setEmail, email, emailAddChecks);
   }
 
   public AccountUpdater password(String newPassword) {
 
-    return new DefaultAccountUpdater<String>(account, ACCOUNT_REPLACE_PASSWORD, encodedPasswordSetter, newPassword,
+    return new DefaultAccountUpdater<String,AccountUpdatedEvent>(account, ACCOUNT_REPLACE_PASSWORD, encodedPasswordSetter, newPassword,
         encodedPasswordChecker);
   }
 
   public AccountUpdater username(String newUsername) {
 
-    return new DefaultAccountUpdater<String>(account, ACCOUNT_REPLACE_USERNAME, account::setUsername, newUsername,
+    return new DefaultAccountUpdater<String,AccountUpdatedEvent>(account, ACCOUNT_REPLACE_USERNAME, account::setUsername, newUsername,
         usernameAddChecks);
   }
 
   public AccountUpdater active(boolean isActive) {
 
-    return new DefaultAccountUpdater<Boolean>(account, ACCOUNT_REPLACE_ACTIVE, account::isActive,
+    return new DefaultAccountUpdater<Boolean,AccountUpdatedEvent>(account, ACCOUNT_REPLACE_ACTIVE, account::isActive,
         account::setActive, isActive);
   }
 

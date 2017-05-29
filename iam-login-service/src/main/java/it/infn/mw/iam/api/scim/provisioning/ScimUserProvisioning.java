@@ -54,7 +54,6 @@ import it.infn.mw.iam.api.scim.updater.factory.DefaultAccountUpdaterFactory;
 import it.infn.mw.iam.audit.events.account.AccountCreatedEvent;
 import it.infn.mw.iam.audit.events.account.AccountRemovedEvent;
 import it.infn.mw.iam.audit.events.account.AccountReplacedEvent;
-import it.infn.mw.iam.audit.events.account.AccountUpdatedEvent;
 import it.infn.mw.iam.persistence.model.IamAccount;
 import it.infn.mw.iam.persistence.model.IamOidcId;
 import it.infn.mw.iam.persistence.model.IamSamlId;
@@ -362,19 +361,23 @@ public class ScimUserProvisioning
 
     List<AccountUpdater> updaters = updatersFactory.getUpdatersForPatchOperation(account, op);
 
-    boolean hasChanged = false;
+    boolean oneUpdaterChangedAccount = false;
 
     for (AccountUpdater u : updaters) {
       if (!SUPPORTED_UPDATER_TYPES.contains(u.getType())) {
         throw new ScimPatchOperationNotSupported(u.getType().getDescription() + " not supported");
       }
-      hasChanged |= u.update();
-
-      eventPublisher.publishEvent(new AccountUpdatedEvent(this, account, u.getType(),
-          String.format("Updated account information for user %s", account.getUsername())));
+      
+      boolean lastUpdaterChangedAccount = u.update();
+      
+      oneUpdaterChangedAccount |= lastUpdaterChangedAccount;
+      
+      if (lastUpdaterChangedAccount){
+        u.publishUpdateEvent(this, eventPublisher);
+      }
     }
 
-    if (hasChanged) {
+    if (oneUpdaterChangedAccount) {
 
       account.touch();
       accountRepository.save(account);
