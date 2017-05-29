@@ -28,6 +28,7 @@ import it.infn.mw.iam.api.scim.provisioning.paging.OffsetPageable;
 import it.infn.mw.iam.api.scim.provisioning.paging.ScimPageRequest;
 import it.infn.mw.iam.api.scim.updater.AccountUpdater;
 import it.infn.mw.iam.api.scim.updater.factory.DefaultGroupMembershipUpdaterFactory;
+import it.infn.mw.iam.audit.events.account.AccountEvent;
 import it.infn.mw.iam.audit.events.group.GroupCreatedEvent;
 import it.infn.mw.iam.audit.events.group.GroupRemovedEvent;
 import it.infn.mw.iam.audit.events.group.GroupReplacedEvent;
@@ -125,8 +126,8 @@ public class ScimGroupProvisioning
     groupRepository.save(iamGroup);
     if (iamParentGroup != null) {
       groupRepository.save(iamParentGroup);
-      eventPublisher.publishEvent(
-          new GroupCreatedEvent(this, iamGroup, "Group created with name " + iamParentGroup.getName()));
+      eventPublisher.publishEvent(new GroupCreatedEvent(this, iamGroup,
+          "Group created with name " + iamParentGroup.getName()));
     }
 
     eventPublisher.publishEvent(
@@ -234,11 +235,12 @@ public class ScimGroupProvisioning
 
     checkUnsupportedPath(op);
 
-    List<AccountUpdater> updaters = groupUpdaterFactory.getUpdatersForPatchOperation(group, op);
+    List<AccountUpdater<Object, AccountEvent>> updaters =
+        groupUpdaterFactory.getUpdatersForPatchOperation(group, op);
 
     boolean hasChanged = false;
 
-    for (AccountUpdater u : updaters) {
+    for (AccountUpdater<Object, AccountEvent> u : updaters) {
       if (u.update()) {
         IamAccount a = u.getAccount();
         a.touch();

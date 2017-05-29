@@ -32,6 +32,7 @@ import it.infn.mw.iam.api.scim.updater.builders.Removers;
 import it.infn.mw.iam.api.scim.updater.builders.Replacers;
 import it.infn.mw.iam.api.scim.updater.util.CollectionHelpers;
 import it.infn.mw.iam.api.scim.updater.util.ScimCollectionConverter;
+import it.infn.mw.iam.audit.events.account.AccountEvent;
 import it.infn.mw.iam.persistence.model.IamAccount;
 import it.infn.mw.iam.persistence.model.IamOidcId;
 import it.infn.mw.iam.persistence.model.IamSamlId;
@@ -84,24 +85,25 @@ public class DefaultAccountUpdaterFactory implements AccountUpdaterFactory<IamAc
         user::getX509Certificates, x509CertificateConverter::fromScim);
   }
 
-  private static <T> AccountUpdater buildUpdater(AccountUpdaterBuilder<T> factory, Supplier<T> valueSupplier) {
+  private static <T, E extends AccountEvent> AccountUpdater<T, E> buildUpdater(
+      AccountUpdaterBuilder<T, E> factory, Supplier<T> valueSupplier) {
     return factory.build(valueSupplier.get());
   }
 
-  private static <T> void addUpdater(List<AccountUpdater> updaters, Predicate<T> valuePredicate,
-      Supplier<T> valueSupplier, AccountUpdaterBuilder<T> factory) {
+  private static <T, E extends AccountEvent> void addUpdater(List<AccountUpdater<T, E>> updaters,
+      Predicate<T> valuePredicate, Supplier<T> valueSupplier, AccountUpdaterBuilder<T, E> factory) {
 
     if (valuePredicate.test(valueSupplier.get())) {
       updaters.add(buildUpdater(factory, valueSupplier));
     }
   }
 
-  private void prepareAdders(List<AccountUpdater> updaters, ScimUser user, IamAccount account) {
+  private <T, E extends AccountEvent> void prepareAdders(List<AccountUpdater<T, E>> updaters,
+      ScimUser user, IamAccount account) {
 
     Adders add = AccountUpdaters.adders(repo, encoder, account);
 
     if (user.hasName()) {
-
       addUpdater(updaters, Objects::nonNull, user.getName()::getGivenName, add::givenName);
       addUpdater(updaters, Objects::nonNull, user.getName()::getFamilyName, add::familyName);
     }
@@ -136,7 +138,8 @@ public class DefaultAccountUpdaterFactory implements AccountUpdaterFactory<IamAc
     }
   }
 
-  private void prepareRemovers(List<AccountUpdater> updaters, ScimUser user, IamAccount account) {
+  private <T, E extends AccountEvent> void prepareRemovers(List<AccountUpdater<T, E>> updaters,
+      ScimUser user, IamAccount account) {
     Removers remove = AccountUpdaters.removers(repo, account);
 
     if (user.hasOidcIds()) {
@@ -164,7 +167,8 @@ public class DefaultAccountUpdaterFactory implements AccountUpdaterFactory<IamAc
     }
   }
 
-  private void prepareReplacers(List<AccountUpdater> updaters, ScimUser user, IamAccount account) {
+  private <T, E extends AccountEvent> void prepareReplacers(List<AccountUpdater<T, E>> updaters,
+      ScimUser user, IamAccount account) {
 
     Replacers replace = AccountUpdaters.replacers(repo, encoder, account);
 
@@ -187,10 +191,10 @@ public class DefaultAccountUpdaterFactory implements AccountUpdaterFactory<IamAc
   }
 
   @Override
-  public List<AccountUpdater> getUpdatersForPatchOperation(IamAccount account,
-      ScimPatchOperation<ScimUser> op) {
+  public <T, E extends AccountEvent> List<AccountUpdater<T, E>> getUpdatersForPatchOperation(
+      IamAccount account, ScimPatchOperation<ScimUser> op) {
 
-    final List<AccountUpdater> updaters = Lists.newArrayList();
+    final List<AccountUpdater<T, E>> updaters = Lists.newArrayList();
 
     final ScimUser user = op.getValue();
 

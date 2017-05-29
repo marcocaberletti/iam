@@ -21,6 +21,7 @@ import it.infn.mw.iam.api.scim.updater.builders.AccountUpdaters;
 import it.infn.mw.iam.api.scim.updater.builders.Adders;
 import it.infn.mw.iam.api.scim.updater.builders.Removers;
 import it.infn.mw.iam.api.scim.updater.util.CollectionHelpers;
+import it.infn.mw.iam.audit.events.account.AccountEvent;
 import it.infn.mw.iam.persistence.model.IamAccount;
 import it.infn.mw.iam.persistence.model.IamGroup;
 import it.infn.mw.iam.persistence.repository.IamAccountRepository;
@@ -36,10 +37,10 @@ public class DefaultGroupMembershipUpdaterFactory
   }
 
   @Override
-  public List<AccountUpdater> getUpdatersForPatchOperation(IamGroup group,
-      ScimPatchOperation<List<ScimMemberRef>> op) {
+  public <T, E extends AccountEvent> List<AccountUpdater<T, E>> getUpdatersForPatchOperation(
+      IamGroup group, ScimPatchOperation<List<ScimMemberRef>> op) {
 
-    final List<AccountUpdater> updaters = Lists.newArrayList();
+    final List<AccountUpdater<T, E>> updaters = Lists.newArrayList();
 
     final List<IamAccount> members = memberRefToAccountConverter(op.getValue());
 
@@ -61,8 +62,8 @@ public class DefaultGroupMembershipUpdaterFactory
 
   }
 
-  private void prepareAdders(List<AccountUpdater> updaters, List<IamAccount> membersToAdd,
-      IamGroup group) {
+  private <T, E extends AccountEvent> void prepareAdders(List<AccountUpdater<T, E>> updaters,
+      List<IamAccount> membersToAdd, IamGroup group) {
 
     Supplier<Collection<IamGroup>> getter = () -> Lists.newArrayList(group);
 
@@ -73,8 +74,8 @@ public class DefaultGroupMembershipUpdaterFactory
     }
   }
 
-  private void prepareRemovers(List<AccountUpdater> updaters, List<IamAccount> membersToRemove,
-      IamGroup group) {
+  private <T, E extends AccountEvent> void prepareRemovers(List<AccountUpdater<T, E>> updaters,
+      List<IamAccount> membersToRemove, IamGroup group) {
 
     Supplier<Collection<IamGroup>> getter = () -> Lists.newArrayList(group);
 
@@ -90,8 +91,8 @@ public class DefaultGroupMembershipUpdaterFactory
     }
   }
 
-  private void prepareReplacers(List<AccountUpdater> updaters, List<IamAccount> membersToReplace,
-      IamGroup group) {
+  private <T, E extends AccountEvent> void prepareReplacers(List<AccountUpdater<T, E>> updaters,
+      List<IamAccount> membersToReplace, IamGroup group) {
 
     Supplier<Collection<IamGroup>> getter = () -> Lists.newArrayList(group);
 
@@ -114,13 +115,13 @@ public class DefaultGroupMembershipUpdaterFactory
     }
   }
 
-  private static <T> AccountUpdater buildUpdater(AccountUpdaterBuilder<T> factory,
-      Supplier<T> valueSupplier) {
+  private static <T, E extends AccountEvent> AccountUpdater<T, E> buildUpdater(
+      AccountUpdaterBuilder<T, E> factory, Supplier<T> valueSupplier) {
     return factory.build(valueSupplier.get());
   }
 
-  private static <T> void addUpdater(List<AccountUpdater> updaters, Predicate<T> valuePredicate,
-      Supplier<T> valueSupplier, AccountUpdaterBuilder<T> factory) {
+  private static <T, E extends AccountEvent> void addUpdater(List<AccountUpdater<T, E>> updaters,
+      Predicate<T> valuePredicate, Supplier<T> valueSupplier, AccountUpdaterBuilder<T, E> factory) {
 
     if (valuePredicate.test(valueSupplier.get())) {
       updaters.add(buildUpdater(factory, valueSupplier));

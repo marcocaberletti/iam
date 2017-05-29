@@ -2,12 +2,12 @@ package it.infn.mw.iam.api.scim.controller;
 
 import static it.infn.mw.iam.api.scim.controller.utils.ValidationHelper.handleValidationError;
 import static it.infn.mw.iam.api.scim.updater.UpdaterType.ACCOUNT_REMOVE_OIDC_ID;
+import static it.infn.mw.iam.api.scim.updater.UpdaterType.ACCOUNT_REMOVE_PICTURE;
 import static it.infn.mw.iam.api.scim.updater.UpdaterType.ACCOUNT_REMOVE_SAML_ID;
 import static it.infn.mw.iam.api.scim.updater.UpdaterType.ACCOUNT_REPLACE_EMAIL;
 import static it.infn.mw.iam.api.scim.updater.UpdaterType.ACCOUNT_REPLACE_FAMILY_NAME;
 import static it.infn.mw.iam.api.scim.updater.UpdaterType.ACCOUNT_REPLACE_GIVEN_NAME;
 import static it.infn.mw.iam.api.scim.updater.UpdaterType.ACCOUNT_REPLACE_PICTURE;
-import static it.infn.mw.iam.api.scim.updater.UpdaterType.ACCOUNT_REMOVE_PICTURE;
 
 import java.util.EnumSet;
 import java.util.List;
@@ -44,6 +44,7 @@ import it.infn.mw.iam.api.scim.model.ScimUserPatchRequest;
 import it.infn.mw.iam.api.scim.updater.AccountUpdater;
 import it.infn.mw.iam.api.scim.updater.UpdaterType;
 import it.infn.mw.iam.api.scim.updater.factory.DefaultAccountUpdaterFactory;
+import it.infn.mw.iam.audit.events.account.AccountEvent;
 import it.infn.mw.iam.persistence.model.IamAccount;
 import it.infn.mw.iam.persistence.repository.IamAccountRepository;
 
@@ -101,11 +102,12 @@ public class ScimMeController {
 
   private void executePatchOperation(IamAccount account, ScimPatchOperation<ScimUser> op) {
 
-    List<AccountUpdater> updaters = updatersFactory.getUpdatersForPatchOperation(account, op);
+    List<AccountUpdater<Object, AccountEvent>> updaters =
+        updatersFactory.getUpdatersForPatchOperation(account, op);
 
     boolean hasChanged = false;
 
-    for (AccountUpdater u : updaters) {
+    for (AccountUpdater<Object, AccountEvent> u : updaters) {
       if (!SUPPORTED_UPDATER_TYPES.contains(u.getType())) {
         throw new ScimPatchOperationNotSupported(u.getType().getDescription() + " not supported");
       }
