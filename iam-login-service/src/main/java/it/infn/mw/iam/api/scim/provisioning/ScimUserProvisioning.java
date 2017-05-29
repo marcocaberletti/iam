@@ -52,7 +52,6 @@ import it.infn.mw.iam.api.scim.updater.AccountUpdater;
 import it.infn.mw.iam.api.scim.updater.UpdaterType;
 import it.infn.mw.iam.api.scim.updater.factory.DefaultAccountUpdaterFactory;
 import it.infn.mw.iam.audit.events.account.AccountCreatedEvent;
-import it.infn.mw.iam.audit.events.account.AccountEvent;
 import it.infn.mw.iam.audit.events.account.AccountRemovedEvent;
 import it.infn.mw.iam.audit.events.account.AccountReplacedEvent;
 import it.infn.mw.iam.persistence.model.IamAccount;
@@ -282,7 +281,8 @@ public class ScimUserProvisioning
     Preconditions.checkNotNull(samlId);
     Preconditions.checkNotNull(samlId.getIdpId());
     Preconditions.checkNotNull(samlId.getUserId());
-    accountRepository.findBySamlId(samlId.getIdpId(), samlId.getUserId()).ifPresent(account -> {
+    Preconditions.checkNotNull(samlId.getAttributeId());
+    accountRepository.findBySamlId(samlId).ifPresent(account -> {
       throw new ScimResourceExistsException(
           String.format("SAML id (%s,%s) already bounded to another user", samlId.getIdpId(),
               samlId.getUserId()));
@@ -359,23 +359,25 @@ public class ScimUserProvisioning
 
   private void executePatchOperation(IamAccount account, ScimPatchOperation<ScimUser> op) {
 
-    List<AccountUpdater<Object, AccountEvent>> updaters =
-        updatersFactory.getUpdatersForPatchOperation(account, op);
+    List<AccountUpdater> updaters = updatersFactory.getUpdatersForPatchOperation(account, op);
 
-    boolean hasChanged = false;
+    boolean oneUpdaterChangedAccount = false;
 
-    for (AccountUpdater<Object, AccountEvent> u : updaters) {
+    for (AccountUpdater u : updaters) {
       if (!SUPPORTED_UPDATER_TYPES.contains(u.getType())) {
         throw new ScimPatchOperationNotSupported(u.getType().getDescription() + " not supported");
       }
-      hasChanged |= u.update();
 
-      if (hasChanged) {
-        eventPublisher.publishEvent(u.buildEvent(this));
+      boolean lastUpdaterChangedAccount = u.update();
+
+      oneUpdaterChangedAccount |= lastUpdaterChangedAccount;
+
+      if (lastUpdaterChangedAccount) {
+        u.publishUpdateEvent(this, eventPublisher);
       }
     }
 
-    if (hasChanged) {
+    if (oneUpdaterChangedAccount) {
 
       account.touch();
       accountRepository.save(account);

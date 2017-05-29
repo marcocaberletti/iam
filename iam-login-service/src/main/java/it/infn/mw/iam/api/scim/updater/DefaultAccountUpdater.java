@@ -4,15 +4,26 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-import it.infn.mw.iam.api.scim.updater.util.AccountEventBuilder;
+import org.springframework.context.ApplicationEventPublisher;
+
 import it.infn.mw.iam.audit.events.account.AccountEvent;
 import it.infn.mw.iam.persistence.model.IamAccount;
 
 public class DefaultAccountUpdater<T, E extends AccountEvent> extends DefaultUpdater<T>
-    implements AccountUpdater<T, E> {
+    implements AccountUpdater {
 
   private final IamAccount account;
   private final AccountEventBuilder<T, E> eventBuilder;
+
+  public DefaultAccountUpdater(IamAccount account, UpdaterType type, Supplier<T> supplier,
+      Consumer<T> consumer, T newVal) {
+    this(account, type, supplier, consumer, newVal, null);
+  }
+
+  public DefaultAccountUpdater(IamAccount account, UpdaterType type, Consumer<T> consumer, T newVal,
+      Predicate<T> predicate) {
+    this(account, type, consumer, newVal, predicate, null);
+  }
 
   public DefaultAccountUpdater(IamAccount account, UpdaterType type, Supplier<T> supplier,
       Consumer<T> consumer, T newVal, AccountEventBuilder<T, E> eventBuilder) {
@@ -34,10 +45,13 @@ public class DefaultAccountUpdater<T, E extends AccountEvent> extends DefaultUpd
   }
 
   @Override
-  public E buildEvent(Object source) {
+  public void publishUpdateEvent(Object source, ApplicationEventPublisher publisher) {
 
-    return eventBuilder.buildAccountEvent(source, account, newValue);
+    if (eventBuilder != null) {
+      publisher.publishEvent(eventBuilder.buildEvent(source, account, newValue));
+    }
   }
+
 
 
 }

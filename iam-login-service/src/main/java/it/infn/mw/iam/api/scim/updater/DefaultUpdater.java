@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import it.infn.mw.iam.api.scim.updater.util.NullSafeNotEqualsMatcher;
 
-public class DefaultUpdater<T> implements Updater<T> {
+public abstract class DefaultUpdater<T> implements Updater {
 
   public static final Logger LOG = LoggerFactory.getLogger(DefaultUpdater.class);
 
@@ -19,7 +19,8 @@ public class DefaultUpdater<T> implements Updater<T> {
   final Predicate<T> applyIf;
 
 
-  public DefaultUpdater(UpdaterType type, Consumer<T> consumer, T newVal, Predicate<T> predicate) {
+  public DefaultUpdater(UpdaterType type, Consumer<T> consumer, T newVal,
+      Predicate<T> predicate) {
 
     this.type = type;
     this.newValue = newVal;
@@ -53,10 +54,5 @@ public class DefaultUpdater<T> implements Updater<T> {
   @Override
   public UpdaterType getType() {
     return type;
-  }
-
-  @Override
-  public T getNewValue() {
-    return newValue;
   }
 }

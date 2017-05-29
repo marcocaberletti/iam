@@ -98,6 +98,7 @@ public class DefaultRegistrationRequestService
     } else if (ExternalAuthenticationType.SAML.equals(extAuthnInfo.getType())) {
       ScimSamlId samlId = new ScimSamlId.Builder().idpId(extAuthnInfo.getIssuer())
         .userId(extAuthnInfo.getSubject())
+        .attributeId(extAuthnInfo.getSubjectAttribute())
         .build();
       user.addSamlId(samlId);
     }
@@ -106,6 +107,8 @@ public class DefaultRegistrationRequestService
   @Override
   public RegistrationRequestDto createRequest(RegistrationRequestDto request,
       Optional<ExternalAuthenticationRegistrationInfo> extAuthnInfo) {
+
+    notesSanityChecks(request.getNotes());
 
     ScimUser.Builder userBuilder = ScimUser.builder()
       .buildName(request.getGivenname(), request.getFamilyname())
@@ -281,6 +284,17 @@ public class DefaultRegistrationRequestService
         "Reject registration request for user " + request.getAccount().getUsername()));
 
     return retval;
+  }
+
+  private void notesSanityChecks(final String notes) {
+
+    if (notes == null) {
+      throw new IllegalArgumentException("Notes field cannot be null");
+    }
+
+    if (notes.trim().isEmpty()) {
+      throw new IllegalArgumentException("Notes field cannot be the empty string");
+    }
   }
 
 }

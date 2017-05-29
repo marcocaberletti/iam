@@ -1,10 +1,12 @@
 package it.infn.mw.iam.api.scim.updater;
 
+import org.springframework.context.ApplicationEventPublisher;
+
 /**
  * And updater attempts to update something, and returns true if that something was actually updated
  *
  */
-public interface Updater<T> {
+public interface Updater {
 
   /**
    * The updater update logic
@@ -24,10 +26,5 @@ public interface Updater<T> {
    */
   UpdaterType getType();
 
-  /**
-   * The new value set by this updater
-   * 
-   * @return the new value
-   */
-  T getNewValue();
+  void publishUpdateEvent(Object source, ApplicationEventPublisher publisher);
 }

@@ -13,17 +13,18 @@ import java.util.function.Predicate;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import com.google.common.base.Strings;
+
+import it.infn.mw.iam.api.scim.exception.IllegalArgumentException;
 import it.infn.mw.iam.api.scim.exception.ScimResourceExistsException;
+import it.infn.mw.iam.api.scim.updater.AccountEventBuilder;
 import it.infn.mw.iam.api.scim.updater.AccountUpdater;
 import it.infn.mw.iam.api.scim.updater.DefaultAccountUpdater;
-import it.infn.mw.iam.api.scim.updater.util.AccountEventBuilder;
+import it.infn.mw.iam.api.scim.updater.UpdaterType;
 import it.infn.mw.iam.api.scim.updater.util.AccountFinder;
 import it.infn.mw.iam.api.scim.updater.util.IdNotBoundChecker;
-import it.infn.mw.iam.audit.events.account.GroupMembershipAddedEvent;
-import it.infn.mw.iam.audit.events.account.OidcAccountAddedEvent;
-import it.infn.mw.iam.audit.events.account.SamlAccountAddedEvent;
-import it.infn.mw.iam.audit.events.account.SshKeyAddedEvent;
-import it.infn.mw.iam.audit.events.account.X509CertificateAddedEvent;
+import it.infn.mw.iam.audit.events.account.AccountUpdatedEvent;
+import it.infn.mw.iam.audit.events.account.oidc.OidcAccountAddedEvent;
 import it.infn.mw.iam.persistence.model.IamAccount;
 import it.infn.mw.iam.persistence.model.IamGroup;
 import it.infn.mw.iam.persistence.model.IamOidcId;
@@ -46,29 +47,15 @@ public class Adders extends Replacers {
   final AccountFinder<IamSshKey> findBySshKey;
   final AccountFinder<IamX509Certificate> findByX509Certificate;
 
-  final AccountEventBuilder<Collection<IamSamlId>, SamlAccountAddedEvent> buildSamlAccountAddedEvent =
+  final AccountEventBuilder<Collection<IamSamlId>, AccountUpdatedEvent> buildSamlAccountAddedEvent =
       (source, a, v) -> {
-        return new SamlAccountAddedEvent(source, a, v);
+        return new AccountUpdatedEvent(source, a, UpdaterType.ACCOUNT_ADD_SAML_ID,
+            String.format("Added SAML account: %s", v));
       };
 
   final AccountEventBuilder<Collection<IamOidcId>, OidcAccountAddedEvent> buildOidcAccountAddedEvent =
       (source, a, v) -> {
-        return new OidcAccountAddedEvent(source, a, v);
-      };
-
-  final AccountEventBuilder<Collection<IamSshKey>, SshKeyAddedEvent> buildSshKeyAddedEvent =
-      (source, a, v) -> {
-        return new SshKeyAddedEvent(source, a, v);
-      };
-
-  final AccountEventBuilder<Collection<IamX509Certificate>, X509CertificateAddedEvent> buildX509CertificateAddedEvent =
-      (source, a, v) -> {
-        return new X509CertificateAddedEvent(source, a, v);
-      };
-
-  final AccountEventBuilder<Collection<IamGroup>, GroupMembershipAddedEvent> buildGroupMembershipAddedEvent =
-      (source, a, v) -> {
-        return new GroupMembershipAddedEvent(source, a, v);
+        return new OidcAccountAddedEvent(source, a, v, String.format("Added OIDC account: %s", v)); 
       };
 
   private Predicate<Collection<IamOidcId>> buildOidcIdsAddChecks() {
@@ -94,6 +81,26 @@ public class Adders extends Replacers {
   }
 
   private Predicate<Collection<IamSamlId>> buildSamlIdsAddChecks() {
+
+    Predicate<Collection<IamSamlId>> samlIdWellFormed = c -> {
+      c.removeIf(Objects::isNull);
+      c.stream().forEach(id -> {
+        if (Strings.isNullOrEmpty(id.getIdpId())) {
+          throw new IllegalArgumentException("idpId cannot be null or empty!");
+        }
+
+        if (Strings.isNullOrEmpty(id.getAttributeId())) {
+          throw new IllegalArgumentException("attributeId cannot be null or empty!");
+        }
+
+        if (Strings.isNullOrEmpty(id.getUserId())) {
+          throw new IllegalArgumentException("userId cannot be null or empty!");
+        }
+      });
+
+      return true;
+    };
+
     Predicate<IamSamlId> samlIdNotBound =
         new IdNotBoundChecker<IamSamlId>(findBySamlId, account, (id, a) -> {
           throw new ScimResourceExistsException(
@@ -101,7 +108,6 @@ public class Adders extends Replacers {
         });
 
     Predicate<Collection<IamSamlId>> samlIdsNotBound = c -> {
-      c.removeIf(Objects::isNull);
       c.stream().forEach(id -> samlIdNotBound.test(id));
       return true;
     };
@@ -110,7 +116,7 @@ public class Adders extends Replacers {
       return !account.getSamlIds().containsAll(c);
     };
 
-    return samlIdsNotBound.and(samlIdsNotOwned);
+    return samlIdWellFormed.and(samlIdsNotBound.and(samlIdsNotOwned));
 
   }
 
@@ -169,7 +175,7 @@ public class Adders extends Replacers {
     super(repo, encoder, account);
 
     findByOidcId = id -> repo.findByOidcId(id.getIssuer(), id.getSubject());
-    findBySamlId = id -> repo.findBySamlId(id.getIdpId(), id.getUserId());
+    findBySamlId = id -> repo.findBySamlId(id);
     findBySshKey = key -> repo.findBySshKeyValue(key.getValue());
     findByX509Certificate = cert -> repo.findByCertificate(cert.getCertificate());
 
@@ -180,43 +186,35 @@ public class Adders extends Replacers {
     addMembersChecks = buildAddMembersCheck();
   }
 
-  public AccountUpdater<Collection<IamOidcId>, OidcAccountAddedEvent> oidcId(
-      Collection<IamOidcId> newOidcIds) {
+  public AccountUpdater oidcId(Collection<IamOidcId> newOidcIds) {
 
     return new DefaultAccountUpdater<Collection<IamOidcId>, OidcAccountAddedEvent>(account,
-        ACCOUNT_ADD_OIDC_ID, account::linkOidcIds, newOidcIds, oidcIdAddChecks,
-        buildOidcAccountAddedEvent);
+        ACCOUNT_ADD_OIDC_ID, account::linkOidcIds, newOidcIds, oidcIdAddChecks, buildOidcAccountAddedEvent);
   }
 
-  public AccountUpdater<Collection<IamSamlId>, SamlAccountAddedEvent> samlId(
-      Collection<IamSamlId> newSamlIds) {
+  public AccountUpdater samlId(Collection<IamSamlId> newSamlIds) {
 
-    return new DefaultAccountUpdater<Collection<IamSamlId>, SamlAccountAddedEvent>(account,
+    return new DefaultAccountUpdater<Collection<IamSamlId>, AccountUpdatedEvent>(account,
         ACCOUNT_ADD_SAML_ID, account::linkSamlIds, newSamlIds, samlIdAddChecks,
         buildSamlAccountAddedEvent);
   }
 
-  public AccountUpdater<Collection<IamSshKey>, SshKeyAddedEvent> sshKey(
-      Collection<IamSshKey> newSshKeys) {
+  public AccountUpdater sshKey(Collection<IamSshKey> newSshKeys) {
 
-    return new DefaultAccountUpdater<Collection<IamSshKey>, SshKeyAddedEvent>(account,
-        ACCOUNT_ADD_SSH_KEY, account::linkSshKeys, newSshKeys, sshKeyAddChecks,
-        buildSshKeyAddedEvent);
+    return new DefaultAccountUpdater<Collection<IamSshKey>, AccountUpdatedEvent>(account, ACCOUNT_ADD_SSH_KEY,
+        account::linkSshKeys, newSshKeys, sshKeyAddChecks);
   }
 
-  public AccountUpdater<Collection<IamX509Certificate>, X509CertificateAddedEvent> x509Certificate(
-      Collection<IamX509Certificate> newX509Certificates) {
+  public AccountUpdater x509Certificate(Collection<IamX509Certificate> newX509Certificates) {
 
-    return new DefaultAccountUpdater<Collection<IamX509Certificate>, X509CertificateAddedEvent>(
-        account, ACCOUNT_ADD_X509_CERTIFICATE, account::linkX509Certificates, newX509Certificates,
-        x509CertificateAddChecks, buildX509CertificateAddedEvent);
+    return new DefaultAccountUpdater<Collection<IamX509Certificate>, AccountUpdatedEvent>(account,
+        ACCOUNT_ADD_X509_CERTIFICATE, account::linkX509Certificates, newX509Certificates,
+        x509CertificateAddChecks);
   }
 
-  public AccountUpdater<Collection<IamGroup>, GroupMembershipAddedEvent> group(
-      Collection<IamGroup> groups) {
+  public AccountUpdater group(Collection<IamGroup> groups) {
 
-    return new DefaultAccountUpdater<Collection<IamGroup>, GroupMembershipAddedEvent>(account,
-        ACCOUNT_ADD_GROUP_MEMBERSHIP, account::linkMembers, groups, addMembersChecks,
-        buildGroupMembershipAddedEvent);
+    return new DefaultAccountUpdater<Collection<IamGroup>,AccountUpdatedEvent>(account, ACCOUNT_ADD_GROUP_MEMBERSHIP,
+        account::linkMembers, groups, addMembersChecks);
   }
 }
