@@ -9,9 +9,11 @@ import org.mockito.Mockito;
 import org.opensaml.saml2.core.NameID;
 import org.springframework.security.saml.SAMLCredential;
 
-import it.infn.mw.iam.authn.saml.util.SamlAttributeNames;
+import it.infn.mw.iam.authn.saml.util.NameIdUserIdentifierResolver;
+import it.infn.mw.iam.authn.saml.util.Saml2Attribute;
 import it.infn.mw.iam.authn.saml.util.SamlIdResolvers;
 import it.infn.mw.iam.authn.saml.util.SamlUserIdentifierResolver;
+import it.infn.mw.iam.persistence.model.IamSamlId;
 
 public class ResolverTests {
 
@@ -22,9 +24,9 @@ public class ResolverTests {
     SAMLCredential cred = Mockito.mock(SAMLCredential.class);
     Mockito.when(cred.getNameID()).thenReturn(null);
 
-    SamlUserIdentifierResolver resolver = SamlIdResolvers.nameid();
+    SamlUserIdentifierResolver resolver = new NameIdUserIdentifierResolver();
 
-    Optional<String> resolvedId = resolver.getUserIdentifier(cred);
+    Optional<IamSamlId> resolvedId = resolver.getSamlUserIdentifier(cred);
 
     Assert.assertFalse(resolvedId.isPresent());
 
@@ -34,26 +36,42 @@ public class ResolverTests {
   public void nameIdResolverTest() {
     NameID nameId = Mockito.mock(NameID.class);
     Mockito.when(nameId.getValue()).thenReturn("nameid");
+    Mockito.when(nameId.getFormat()).thenReturn("format");
 
     SAMLCredential cred = Mockito.mock(SAMLCredential.class);
     Mockito.when(cred.getNameID()).thenReturn(nameId);
+    Mockito.when(cred.getRemoteEntityID()).thenReturn("entityId");
 
-    SamlUserIdentifierResolver resolver = SamlIdResolvers.nameid();
 
-    Optional<String> resolvedId = resolver.getUserIdentifier(cred);
+    SamlUserIdentifierResolver resolver = new NameIdUserIdentifierResolver();
 
-    Assert.assertThat(resolvedId.get(), Matchers.equalTo("nameid"));
+    IamSamlId resolvedId = resolver.getSamlUserIdentifier(cred)
+      .orElseThrow(() -> new AssertionError("Could not resolve nameid SAML ID"));
 
+    Assert.assertThat(resolvedId.getUserId(), Matchers.equalTo("nameid"));
+    Assert.assertThat(resolvedId.getIdpId(), Matchers.equalTo("entityId"));
+    Assert.assertThat(resolvedId.getAttributeId(), Matchers.equalTo("format"));
   }
 
   @Test
   public void mailIdResolverTest() {
-    SamlUserIdentifierResolver resolver = SamlIdResolvers.mail();
+    SamlIdResolvers resolvers = new SamlIdResolvers();
+
+    SamlUserIdentifierResolver resolver = resolvers.byAttribute(Saml2Attribute.mail);
+
     SAMLCredential cred = Mockito.mock(SAMLCredential.class);
-    Mockito.when(cred.getAttributeAsString(SamlAttributeNames.mail)).thenReturn("test@test.org");
+    Mockito.when(cred.getAttributeAsString(Saml2Attribute.mail.getAttributeName()))
+      .thenReturn("test@test.org");
+    Mockito.when(cred.getRemoteEntityID()).thenReturn("entityId");
 
-    Optional<String> resolvedId = resolver.getUserIdentifier(cred);
+    IamSamlId resolvedId = resolver.getSamlUserIdentifier(cred)
+      .orElseThrow(() -> new AssertionError("Could not resolve email address SAML ID"));
 
-    Assert.assertThat(resolvedId.get(), Matchers.equalTo("test@test.org"));
+    Assert.assertThat(resolvedId.getUserId(), Matchers.equalTo("test@test.org"));
+    Assert.assertThat(resolvedId.getAttributeId(),
+        Matchers.equalTo(Saml2Attribute.mail.getAttributeName()));
+
+    Assert.assertThat(resolvedId.getIdpId(), Matchers.equalTo("entityId"));
+
   }
 }

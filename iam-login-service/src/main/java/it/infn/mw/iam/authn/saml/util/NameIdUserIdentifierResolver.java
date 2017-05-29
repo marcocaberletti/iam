@@ -7,16 +7,30 @@ import org.springframework.security.saml.SAMLCredential;
 
 import com.google.common.base.Verify;
 
-public class NameIdUserIdentifierResolver implements SamlUserIdentifierResolver {
+import it.infn.mw.iam.persistence.model.IamSamlId;
+
+public class NameIdUserIdentifierResolver extends AbstractSamlUserIdentifierResolver{
+
+  public static final String NAMEID_RESOLVER = "nameID";
+  
+  public NameIdUserIdentifierResolver() {
+    super(NAMEID_RESOLVER);
+  }
 
   @Override
-  public Optional<String> getUserIdentifier(SAMLCredential samlCredential) {
+  public Optional<IamSamlId> getSamlUserIdentifier(SAMLCredential samlCredential) {
 
     Verify.verifyNotNull(samlCredential);
 
     if (samlCredential.getNameID() != null) {
       NameID nameId = samlCredential.getNameID();
-      return Optional.of(nameId.getValue());
+      
+      IamSamlId samlId = new IamSamlId();
+      samlId.setAttributeId(nameId.getFormat());
+      samlId.setUserId(nameId.getValue());
+      samlId.setIdpId(samlCredential.getRemoteEntityID());
+      
+      return Optional.of(samlId);
 
     }
     
