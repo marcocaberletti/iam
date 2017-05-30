@@ -9,14 +9,10 @@ import it.infn.mw.iam.persistence.model.IamOidcId;
 
 public class OidcAccountAddedEvent extends OidcAccountUpdatedEvent {
 
-  public OidcAccountAddedEvent(Object source, IamAccount account,
-      Collection<IamOidcId> oidcIds, String message) {
-    super(source, account, ACCOUNT_ADD_OIDC_ID, oidcIds, message);
-  }
-
-  /**
-   * 
-   */
   private static final long serialVersionUID = 1L;
+
+  public OidcAccountAddedEvent(Object source, IamAccount account, Collection<IamOidcId> oidcIds) {
+    super(source, account, ACCOUNT_ADD_OIDC_ID, oidcIds);
+  }
 
 }

@@ -8,19 +8,19 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 
-import it.infn.mw.iam.persistence.model.IamSamlId;
+import it.infn.mw.iam.persistence.model.IamGroup;
 
-public class IamSamlSerializer extends JsonSerializer<Collection<IamSamlId>> {
+public class IamGroupCollectionSerializer extends JsonSerializer<Collection<IamGroup>> {
 
   @Override
-  public void serialize(Collection<IamSamlId> value, JsonGenerator gen,
+  public void serialize(Collection<IamGroup> value, JsonGenerator gen,
       SerializerProvider serializers) throws IOException, JsonProcessingException {
 
     gen.writeStartArray();
-    for (IamSamlId elem : value) {
+    for (IamGroup elem : value) {
       gen.writeStartObject();
-      gen.writeStringField("idpid", elem.getIdpId());
-      gen.writeStringField("userid", elem.getUserId());
+      gen.writeStringField("uuid", elem.getUuid());
+      gen.writeStringField("name", elem.getName());
       gen.writeEndObject();
     }
     gen.writeEndArray();

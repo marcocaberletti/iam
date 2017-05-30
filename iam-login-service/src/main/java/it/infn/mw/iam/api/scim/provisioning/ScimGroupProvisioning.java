@@ -31,7 +31,6 @@ import it.infn.mw.iam.api.scim.updater.factory.DefaultGroupMembershipUpdaterFact
 import it.infn.mw.iam.audit.events.group.GroupCreatedEvent;
 import it.infn.mw.iam.audit.events.group.GroupRemovedEvent;
 import it.infn.mw.iam.audit.events.group.GroupReplacedEvent;
-import it.infn.mw.iam.audit.events.group.GroupUpdatedEvent;
 import it.infn.mw.iam.persistence.model.IamAccount;
 import it.infn.mw.iam.persistence.model.IamGroup;
 import it.infn.mw.iam.persistence.repository.IamAccountRepository;
@@ -125,8 +124,8 @@ public class ScimGroupProvisioning
     groupRepository.save(iamGroup);
     if (iamParentGroup != null) {
       groupRepository.save(iamParentGroup);
-      eventPublisher.publishEvent(
-          new GroupCreatedEvent(this, iamGroup, "Group created with name " + iamParentGroup.getName()));
+      eventPublisher.publishEvent(new GroupCreatedEvent(this, iamParentGroup,
+          "Group created with name " + iamParentGroup.getName()));
     }
 
     eventPublisher.publishEvent(
@@ -245,8 +244,7 @@ public class ScimGroupProvisioning
         accountRepository.save(a);
         hasChanged = true;
 
-        eventPublisher.publishEvent(new GroupUpdatedEvent(this, group, u.getType(),
-            String.format("Updated information for group %s", group.getName())));
+        u.publishUpdateEvent(this, eventPublisher);
       }
     }
 

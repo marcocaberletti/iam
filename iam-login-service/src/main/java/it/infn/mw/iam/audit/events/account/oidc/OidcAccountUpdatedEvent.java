@@ -12,19 +12,25 @@ import it.infn.mw.iam.persistence.model.IamOidcId;
 
 public abstract class OidcAccountUpdatedEvent extends AccountUpdatedEvent {
 
-  /**
-   * 
-   */
   private static final long serialVersionUID = 1L;
-  
-  
+
   @JsonSerialize(using = IamOidcSerializer.class)
   private final Collection<IamOidcId> oidcIds;
 
   public OidcAccountUpdatedEvent(Object source, IamAccount account, UpdaterType type,
-      Collection<IamOidcId> oidcIds, String message) {
-    super(source, account, type, message);
+      Collection<IamOidcId> oidcIds) {
+    super(source, account, type, buildMessage(type, account, oidcIds));
     this.oidcIds = oidcIds;
+  }
+
+  protected Collection<IamOidcId> getOidcIds() {
+    return oidcIds;
+  }
+
+  protected static String buildMessage(UpdaterType t, IamAccount account,
+      Collection<IamOidcId> oidcIds) {
+    return String.format("%s: username: '%s' values: '%s'", t.getDescription(),
+        account.getUsername(), oidcIds);
   }
 
 }

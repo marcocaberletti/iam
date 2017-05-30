@@ -2,12 +2,12 @@ package it.infn.mw.iam.api.scim.controller;
 
 import static it.infn.mw.iam.api.scim.controller.utils.ValidationHelper.handleValidationError;
 import static it.infn.mw.iam.api.scim.updater.UpdaterType.ACCOUNT_REMOVE_OIDC_ID;
+import static it.infn.mw.iam.api.scim.updater.UpdaterType.ACCOUNT_REMOVE_PICTURE;
 import static it.infn.mw.iam.api.scim.updater.UpdaterType.ACCOUNT_REMOVE_SAML_ID;
 import static it.infn.mw.iam.api.scim.updater.UpdaterType.ACCOUNT_REPLACE_EMAIL;
 import static it.infn.mw.iam.api.scim.updater.UpdaterType.ACCOUNT_REPLACE_FAMILY_NAME;
 import static it.infn.mw.iam.api.scim.updater.UpdaterType.ACCOUNT_REPLACE_GIVEN_NAME;
 import static it.infn.mw.iam.api.scim.updater.UpdaterType.ACCOUNT_REPLACE_PICTURE;
-import static it.infn.mw.iam.api.scim.updater.UpdaterType.ACCOUNT_REMOVE_PICTURE;
 
 import java.util.EnumSet;
 import java.util.List;
@@ -15,6 +15,8 @@ import java.util.List;
 import javax.transaction.Transactional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.ApplicationEventPublisherAware;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -50,7 +52,7 @@ import it.infn.mw.iam.persistence.repository.IamAccountRepository;
 @RestController
 @RequestMapping("/scim/Me")
 @Transactional
-public class ScimMeController {
+public class ScimMeController implements ApplicationEventPublisherAware {
 
   public static final EnumSet<UpdaterType> SUPPORTED_UPDATER_TYPES =
       EnumSet.of(ACCOUNT_REMOVE_OIDC_ID, ACCOUNT_REMOVE_SAML_ID, ACCOUNT_REPLACE_EMAIL,
@@ -63,6 +65,8 @@ public class ScimMeController {
 
   private final DefaultAccountUpdaterFactory updatersFactory;
 
+  private ApplicationEventPublisher eventPublisher;
+
   @Autowired
   public ScimMeController(IamAccountRepository accountRepository, UserConverter userConverter,
       PasswordEncoder passwordEncoder, OidcIdConverter oidcIdConverter,
@@ -73,6 +77,10 @@ public class ScimMeController {
     this.userConverter = userConverter;
     this.updatersFactory = new DefaultAccountUpdaterFactory(passwordEncoder, accountRepository,
         oidcIdConverter, samlIdConverter, sshKeyConverter, x509CertificateConverter);
+  }
+
+  public void setApplicationEventPublisher(ApplicationEventPublisher publisher) {
+    this.eventPublisher = publisher;
   }
 
   @PreAuthorize("#oauth2.hasScope('scim:read') or hasRole('USER')")
@@ -111,6 +119,7 @@ public class ScimMeController {
       }
       if (u.update()) {
         hasChanged = true;
+        u.publishUpdateEvent(this, eventPublisher);
       }
     }
 

@@ -8,19 +8,19 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 
-import it.infn.mw.iam.persistence.model.IamSamlId;
+import it.infn.mw.iam.persistence.model.IamX509Certificate;
 
-public class IamSamlSerializer extends JsonSerializer<Collection<IamSamlId>> {
+public class IamX509CertificateSerializer extends JsonSerializer<Collection<IamX509Certificate>> {
 
   @Override
-  public void serialize(Collection<IamSamlId> value, JsonGenerator gen,
+  public void serialize(Collection<IamX509Certificate> value, JsonGenerator gen,
       SerializerProvider serializers) throws IOException, JsonProcessingException {
 
     gen.writeStartArray();
-    for (IamSamlId elem : value) {
+    for (IamX509Certificate elem : value) {
       gen.writeStartObject();
-      gen.writeStringField("idpid", elem.getIdpId());
-      gen.writeStringField("userid", elem.getUserId());
+      gen.writeStringField("label", elem.getLabel());
+      gen.writeStringField("certificateSubject", elem.getCertificateSubject());
       gen.writeEndObject();
     }
     gen.writeEndArray();

@@ -16,16 +16,6 @@ public class DefaultAccountUpdater<T, E extends AccountEvent> extends DefaultUpd
   private final AccountEventBuilder<T, E> eventBuilder;
 
   public DefaultAccountUpdater(IamAccount account, UpdaterType type, Supplier<T> supplier,
-      Consumer<T> consumer, T newVal) {
-    this(account, type, supplier, consumer, newVal, null);
-  }
-
-  public DefaultAccountUpdater(IamAccount account, UpdaterType type, Consumer<T> consumer, T newVal,
-      Predicate<T> predicate) {
-    this(account, type, consumer, newVal, predicate, null);
-  }
-
-  public DefaultAccountUpdater(IamAccount account, UpdaterType type, Supplier<T> supplier,
       Consumer<T> consumer, T newVal, AccountEventBuilder<T, E> eventBuilder) {
     super(type, supplier, consumer, newVal);
     this.account = account;
@@ -51,7 +41,5 @@ public class DefaultAccountUpdater<T, E extends AccountEvent> extends DefaultUpd
       publisher.publishEvent(eventBuilder.buildEvent(source, account, newValue));
     }
   }
-
-
 
 }

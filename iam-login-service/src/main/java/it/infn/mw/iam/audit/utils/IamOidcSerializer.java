@@ -1,6 +1,7 @@
 package it.infn.mw.iam.audit.utils;
 
 import java.io.IOException;
+import java.util.Collection;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -9,15 +10,19 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 
 import it.infn.mw.iam.persistence.model.IamOidcId;
 
-public class IamOidcSerializer extends JsonSerializer<IamOidcId> {
+public class IamOidcSerializer extends JsonSerializer<Collection<IamOidcId>> {
 
   @Override
-  public void serialize(IamOidcId value, JsonGenerator gen, SerializerProvider serializers)
-      throws IOException, JsonProcessingException {
-    gen.writeStartObject();
-    gen.writeStringField("issuer", value.getIssuer());
-    gen.writeStringField("subject", value.getSubject());
-    gen.writeEndObject();
+  public void serialize(Collection<IamOidcId> value, JsonGenerator gen,
+      SerializerProvider serializers) throws IOException, JsonProcessingException {
+    gen.writeStartArray();
+    for (IamOidcId elem : value) {
+      gen.writeStartObject();
+      gen.writeStringField("issuer", elem.getIssuer());
+      gen.writeStringField("subject", elem.getSubject());
+      gen.writeEndObject();
+    }
+    gen.writeEndArray();
   }
 
 }
