@@ -99,7 +99,7 @@ public class ScimGroupProvisioning
     iamGroup.setName(group.getDisplayName());
     iamGroup.setCreationTime(creationTime);
     iamGroup.setLastUpdateTime(creationTime);
-    iamGroup.setAccounts(new HashSet<IamAccount>());
+    iamGroup.setAccounts(new HashSet<>());
     iamGroup.setChildrenGroups(new HashSet<>());
 
     if (groupRepository.findByName(group.getDisplayName()).isPresent()) {
