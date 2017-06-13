@@ -19,7 +19,7 @@ public abstract class X509CertificateUpdatedEvent extends AccountUpdatedEvent {
 
   public X509CertificateUpdatedEvent(Object source, IamAccount account, UpdaterType type,
       Collection<IamX509Certificate> x509Certificates) {
-    super(source, account, type, buildMessage(type, x509Certificates));
+    super(source, account, type, buildMessage(type, account, x509Certificates));
     this.x509Certificates = x509Certificates;
   }
 
@@ -27,9 +27,10 @@ public abstract class X509CertificateUpdatedEvent extends AccountUpdatedEvent {
     return x509Certificates;
   }
 
-  protected static String buildMessage(UpdaterType t,
+  protected static String buildMessage(UpdaterType t, IamAccount account,
       Collection<IamX509Certificate> x509Certificates) {
-    return String.format("%s: %s", t.getDescription(), x509Certificates);
+    return String.format("%s: username: '%s' values: '%s'", t.getDescription(),
+        account.getUsername(), x509Certificates);
   }
 
 }

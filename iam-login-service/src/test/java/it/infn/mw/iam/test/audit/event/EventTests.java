@@ -1,5 +1,6 @@
 package it.infn.mw.iam.test.audit.event;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
@@ -42,6 +43,7 @@ import it.infn.mw.iam.audit.events.account.ssh.SshKeyAddedEvent;
 import it.infn.mw.iam.audit.events.account.ssh.SshKeyRemovedEvent;
 import it.infn.mw.iam.audit.events.account.x509.X509CertificateAddedEvent;
 import it.infn.mw.iam.audit.events.account.x509.X509CertificateRemovedEvent;
+import it.infn.mw.iam.authn.saml.util.SamlAttributeNames;
 import it.infn.mw.iam.persistence.model.IamAccount;
 import it.infn.mw.iam.test.TestUtils;
 
@@ -65,6 +67,8 @@ public class EventTests {
   private static final String X509_LABEL = "test_label";
   private static final String X509_CERT = TestUtils.x509Certs.get(0).certificate;
   private static final String GROUPNAME = "event_group";
+
+  private static final String USERNAME_MESSAGE_CHECK = String.format("username: '%s'", USERNAME);
 
   @Autowired
   private IamAuditEventLogger logger;
@@ -130,6 +134,11 @@ public class EventTests {
     IamAuditApplicationEvent event = logger.getLastEvent();
     assertThat(event, instanceOf(SamlAccountAddedEvent.class));
     assertNotNull(event.getMessage());
+    assertThat(event.getMessage(), containsString("Add SAML account to user"));
+    assertThat(event.getMessage(), containsString(USERNAME_MESSAGE_CHECK));
+    assertThat(event.getMessage(), containsString("idpId=bar"));
+    assertThat(event.getMessage(), containsString("attributeId=foo"));
+    assertThat(event.getMessage(), containsString("userId=test"));
   }
 
   @Test
@@ -145,6 +154,12 @@ public class EventTests {
     IamAuditApplicationEvent event = logger.getLastEvent();
     assertThat(event, instanceOf(SamlAccountRemovedEvent.class));
     assertNotNull(event.getMessage());
+    assertThat(event.getMessage(), containsString("Remove SAML account from user"));
+    assertThat(event.getMessage(), containsString(USERNAME_MESSAGE_CHECK));
+    assertThat(event.getMessage(), containsString("idpId=" + SAML_IDP));
+    assertThat(event.getMessage(),
+        containsString("attributeId=" + SamlAttributeNames.eduPersonUniqueId));
+    assertThat(event.getMessage(), containsString("userId=" + SAML_USER_ID));
   }
 
   @Test
@@ -160,6 +175,10 @@ public class EventTests {
     IamAuditApplicationEvent event = logger.getLastEvent();
     assertThat(event, instanceOf(OidcAccountAddedEvent.class));
     assertNotNull(event.getMessage());
+    assertThat(event.getMessage(), containsString("Add OpenID Connect account to user"));
+    assertThat(event.getMessage(), containsString(USERNAME_MESSAGE_CHECK));
+    assertThat(event.getMessage(), containsString("issuer=foo"));
+    assertThat(event.getMessage(), containsString("subject=bar"));
   }
 
   @Test
@@ -175,6 +194,10 @@ public class EventTests {
     IamAuditApplicationEvent event = logger.getLastEvent();
     assertThat(event, instanceOf(OidcAccountRemovedEvent.class));
     assertNotNull(event.getMessage());
+    assertThat(event.getMessage(), containsString("Remove OpenID Connect account from user"));
+    assertThat(event.getMessage(), containsString(USERNAME_MESSAGE_CHECK));
+    assertThat(event.getMessage(), containsString("issuer=" + OIDC_ISSUER));
+    assertThat(event.getMessage(), containsString("subject=" + OIDC_SUBJECT));
   }
 
   @Test
@@ -194,6 +217,12 @@ public class EventTests {
     IamAuditApplicationEvent event = logger.getLastEvent();
     assertThat(event, instanceOf(SshKeyAddedEvent.class));
     assertNotNull(event.getMessage());
+    assertThat(event.getMessage(), containsString("Add ssh key to user"));
+    assertThat(event.getMessage(), containsString(USERNAME_MESSAGE_CHECK));
+    assertThat(event.getMessage(), containsString("label=foo"));
+    assertThat(event.getMessage(),
+        containsString("fingerprint=" + TestUtils.sshKeys.get(1).fingerprintSHA256));
+    assertThat(event.getMessage(), containsString("value=" + TestUtils.sshKeys.get(1).key));
   }
 
   @Test
@@ -213,6 +242,11 @@ public class EventTests {
     IamAuditApplicationEvent event = logger.getLastEvent();
     assertThat(event, instanceOf(SshKeyRemovedEvent.class));
     assertNotNull(event.getMessage());
+    assertThat(event.getMessage(), containsString("Remove ssh key from user"));
+    assertThat(event.getMessage(), containsString(USERNAME_MESSAGE_CHECK));
+    assertThat(event.getMessage(), containsString("label=" + SSH_LABEL));
+    assertThat(event.getMessage(), containsString("fingerprint=" + SSH_FINGERPRINT));
+    assertThat(event.getMessage(), containsString("value=" + SSH_KEY));
   }
 
   @Test
@@ -231,6 +265,11 @@ public class EventTests {
     IamAuditApplicationEvent event = logger.getLastEvent();
     assertThat(event, instanceOf(X509CertificateAddedEvent.class));
     assertNotNull(event.getMessage());
+    assertThat(event.getMessage(), containsString("Add x509 certificate to user"));
+    assertThat(event.getMessage(), containsString(USERNAME_MESSAGE_CHECK));
+    assertThat(event.getMessage(), containsString("label=" + TestUtils.x509Certs.get(1).display));
+    assertThat(event.getMessage(),
+        containsString("certificate=" + TestUtils.x509Certs.get(1).certificate));
   }
 
   @Test
@@ -247,6 +286,10 @@ public class EventTests {
     IamAuditApplicationEvent event = logger.getLastEvent();
     assertThat(event, instanceOf(X509CertificateRemovedEvent.class));
     assertNotNull(event.getMessage());
+    assertThat(event.getMessage(), containsString("Remove x509 certificate from user"));
+    assertThat(event.getMessage(), containsString(USERNAME_MESSAGE_CHECK));
+    assertThat(event.getMessage(), containsString("label=" + X509_LABEL));
+    assertThat(event.getMessage(), containsString("certificate=" + X509_CERT));
   }
 
   @Test
@@ -262,6 +305,9 @@ public class EventTests {
     IamAuditApplicationEvent event = logger.getLastEvent();
     assertThat(event, instanceOf(GroupMembershipAddedEvent.class));
     assertNotNull(event.getMessage());
+    assertThat(event.getMessage(), containsString("Add group to user"));
+    assertThat(event.getMessage(), containsString(USERNAME_MESSAGE_CHECK));
+    assertThat(event.getMessage(), containsString("name=second_group"));
   }
 
   @Test
@@ -275,6 +321,9 @@ public class EventTests {
     IamAuditApplicationEvent event = logger.getLastEvent();
     assertThat(event, instanceOf(GroupMembershipRemovedEvent.class));
     assertNotNull(event.getMessage());
+    assertThat(event.getMessage(), containsString("Remove user from group"));
+    assertThat(event.getMessage(), containsString(USERNAME_MESSAGE_CHECK));
+    assertThat(event.getMessage(), containsString("name=" + GROUPNAME));
   }
 
 }
