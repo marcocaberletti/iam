@@ -360,6 +360,7 @@ public class ScimUserProvisioning
   private void executePatchOperation(IamAccount account, ScimPatchOperation<ScimUser> op) {
 
     List<AccountUpdater> updaters = updatersFactory.getUpdatersForPatchOperation(account, op);
+    List<AccountUpdater> updatesToPublish = new ArrayList<>();
 
     boolean oneUpdaterChangedAccount = false;
 
@@ -373,7 +374,7 @@ public class ScimUserProvisioning
       oneUpdaterChangedAccount |= lastUpdaterChangedAccount;
 
       if (lastUpdaterChangedAccount) {
-        u.publishUpdateEvent(this, eventPublisher);
+        updatesToPublish.add(u);
       }
     }
 
@@ -381,6 +382,9 @@ public class ScimUserProvisioning
 
       account.touch();
       accountRepository.save(account);
+      for (AccountUpdater u : updatesToPublish) {
+        u.publishUpdateEvent(this, eventPublisher);
+      }
 
     }
   }

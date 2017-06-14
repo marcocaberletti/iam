@@ -9,6 +9,7 @@ import static it.infn.mw.iam.api.scim.updater.UpdaterType.ACCOUNT_REPLACE_FAMILY
 import static it.infn.mw.iam.api.scim.updater.UpdaterType.ACCOUNT_REPLACE_GIVEN_NAME;
 import static it.infn.mw.iam.api.scim.updater.UpdaterType.ACCOUNT_REPLACE_PICTURE;
 
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 
@@ -110,6 +111,7 @@ public class ScimMeController implements ApplicationEventPublisherAware {
   private void executePatchOperation(IamAccount account, ScimPatchOperation<ScimUser> op) {
 
     List<AccountUpdater> updaters = updatersFactory.getUpdatersForPatchOperation(account, op);
+    List<AccountUpdater> updatesToPublish = new ArrayList<>();
 
     boolean hasChanged = false;
 
@@ -119,7 +121,7 @@ public class ScimMeController implements ApplicationEventPublisherAware {
       }
       if (u.update()) {
         hasChanged = true;
-        u.publishUpdateEvent(this, eventPublisher);
+        updatesToPublish.add(u);
       }
     }
 
@@ -127,7 +129,9 @@ public class ScimMeController implements ApplicationEventPublisherAware {
 
       account.touch();
       iamAccountRepository.save(account);
-
+      for (AccountUpdater u : updatesToPublish) {
+        u.publishUpdateEvent(this, eventPublisher);
+      }
     }
   }
 

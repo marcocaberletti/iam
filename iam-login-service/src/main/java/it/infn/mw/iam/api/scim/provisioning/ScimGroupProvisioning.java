@@ -234,6 +234,7 @@ public class ScimGroupProvisioning
     checkUnsupportedPath(op);
 
     List<AccountUpdater> updaters = groupUpdaterFactory.getUpdatersForPatchOperation(group, op);
+    List<AccountUpdater> updatesToPublish = new ArrayList<>();
 
     boolean hasChanged = false;
 
@@ -243,8 +244,7 @@ public class ScimGroupProvisioning
         a.touch();
         accountRepository.save(a);
         hasChanged = true;
-
-        u.publishUpdateEvent(this, eventPublisher);
+        updatesToPublish.add(u);
       }
     }
 
@@ -252,7 +252,9 @@ public class ScimGroupProvisioning
 
       group.touch();
       groupRepository.save(group);
-
+      for (AccountUpdater u : updatesToPublish) {
+        u.publishUpdateEvent(this, eventPublisher);
+      }
     }
   }
 
