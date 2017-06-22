@@ -2,9 +2,6 @@ package it.infn.mw.iam.test.notification;
 
 import static it.infn.mw.iam.test.RegistrationUtils.createRegistrationRequest;
 import static it.infn.mw.iam.test.RegistrationUtils.deleteUser;
-
-import static it.infn.mw.iam.test.TestUtils.waitIfPortIsUsed;
-
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertThat;
@@ -20,6 +17,7 @@ import java.util.concurrent.Future;
 
 import org.apache.commons.lang.time.DateUtils;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -76,7 +74,9 @@ public class NotificationConcurrentTests {
 
   @Before
   public void setUp() throws InterruptedException {
-    waitIfPortIsUsed(mailHost, mailPort, 30);
+    notificationRepository.deleteAll();
+
+    // waitIfPortIsUsed(mailHost, mailPort, 30);
 
     wiserSmtpServer = new Wiser();
     wiserSmtpServer.setHostname(mailHost);
@@ -92,6 +92,10 @@ public class NotificationConcurrentTests {
 
     deleteUser(registrationRequest.getAccountId());
     notificationRepository.deleteAll();
+
+    if (wiserSmtpServer.getServer().isRunning()) {
+      Assert.fail("Fake mail server is still running after stop!!");
+    }
   }
 
   @Test
@@ -136,11 +140,12 @@ public class NotificationConcurrentTests {
     }
 
     barrier.await();
-    executorService.shutdown();
 
     for (Future<Integer> elem : futuresList) {
       elem.get();
     }
+
+    executorService.shutdown();
 
     int count = notificationRepository.countAllMessages();
     assertThat(count, equalTo(0));

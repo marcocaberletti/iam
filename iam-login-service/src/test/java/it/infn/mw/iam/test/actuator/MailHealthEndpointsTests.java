@@ -1,6 +1,5 @@
 package it.infn.mw.iam.test.actuator;
 
-import static it.infn.mw.iam.test.TestUtils.waitIfPortIsUsed;
 import static java.lang.String.format;
 import static org.hamcrest.Matchers.equalTo;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
@@ -10,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -54,7 +54,7 @@ public class MailHealthEndpointsTests {
   private MockMvc mvc;
   private Wiser wiser;
 
-  private int timeoutInSecs = 30;
+  // private int timeoutInSecs = 30;
 
   @Before
   public void setup() throws InterruptedException {
@@ -63,7 +63,7 @@ public class MailHealthEndpointsTests {
       .alwaysDo(print())
       .build();
 
-    waitIfPortIsUsed(mailHost, mailPort, timeoutInSecs);
+    // waitIfPortIsUsed(mailHost, mailPort, timeoutInSecs);
 
     wiser = new Wiser();
     wiser.setHostname(mailHost);
@@ -74,6 +74,9 @@ public class MailHealthEndpointsTests {
   @After
   public void teardown() {
     wiser.stop();
+    if (wiser.getServer().isRunning()) {
+      Assert.fail("Fake mail server is still running after stop!!");
+    }
   }
 
   @Test
