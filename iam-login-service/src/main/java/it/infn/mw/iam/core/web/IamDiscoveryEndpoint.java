@@ -18,7 +18,6 @@ import org.mitre.openid.connect.service.UserInfoService;
 import org.mitre.openid.connect.view.HttpCodeView;
 import org.mitre.openid.connect.view.JsonEntityView;
 import org.mitre.openid.connect.web.DynamicClientRegistrationEndpoint;
-import org.mitre.openid.connect.web.JWKSetPublishingEndpoint;
 import org.mitre.openid.connect.web.UserInfoEndpoint;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -294,7 +293,7 @@ public class IamDiscoveryEndpoint {
     // check_session_iframe
 
     // end_session_endpoint
-    m.put("jwks_uri", baseUrl + JWKSetPublishingEndpoint.URL);
+    m.put("jwks_uri", baseUrl + IamJwkSetPublishingEndpoint.URL);
     m.put("registration_endpoint", baseUrl + DynamicClientRegistrationEndpoint.URL);
     m.put("scopes_supported", scopeService.toStrings(scopeService.getUnrestricted()));
     m.put("response_types_supported", Lists.newArrayList("code", "token"));

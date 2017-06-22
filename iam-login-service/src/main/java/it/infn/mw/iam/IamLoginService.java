@@ -1,6 +1,7 @@
 package it.infn.mw.iam;
 
 import org.mitre.discovery.web.DiscoveryEndpoint;
+import org.mitre.openid.connect.web.JWKSetPublishingEndpoint;
 import org.mitre.openid.connect.web.RootController;
 import org.mitre.openid.connect.web.UserInfoEndpoint;
 import org.springframework.boot.SpringApplication;
@@ -47,7 +48,9 @@ excludeFilters = {
     @ComponentScan.Filter(type=FilterType.ASSIGNABLE_TYPE,
         value=DiscoveryEndpoint.class),
     @ComponentScan.Filter(type=FilterType.ASSIGNABLE_TYPE,
-        value=HealthEndpoint.class)
+        value=HealthEndpoint.class),
+    @ComponentScan.Filter(type=FilterType.ASSIGNABLE_TYPE,
+        value=JWKSetPublishingEndpoint.class)
 })
 // @formatter:on
 
