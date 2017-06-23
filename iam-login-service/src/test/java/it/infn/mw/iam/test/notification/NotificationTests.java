@@ -3,6 +3,7 @@ package it.infn.mw.iam.test.notification;
 import static it.infn.mw.iam.core.IamRegistrationRequestStatus.APPROVED;
 import static it.infn.mw.iam.core.IamRegistrationRequestStatus.CONFIRMED;
 import static it.infn.mw.iam.core.IamRegistrationRequestStatus.REJECTED;
+import static it.infn.mw.iam.test.TestUtils.waitIfPortIsUsed;
 import static java.lang.String.format;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
@@ -60,13 +61,11 @@ import it.infn.mw.iam.registration.PersistentUUIDTokenGenerator;
 import it.infn.mw.iam.registration.RegistrationRequestDto;
 import it.infn.mw.iam.test.core.CoreControllerTestSupport;
 import it.infn.mw.iam.test.util.WithMockOAuthUser;
-import net.jcip.annotations.NotThreadSafe;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @SpringApplicationConfiguration(classes = {IamLoginService.class, CoreControllerTestSupport.class})
 @WebAppConfiguration
 @Transactional
-@NotThreadSafe
 public class NotificationTests {
 
   @Autowired
@@ -117,6 +116,8 @@ public class NotificationTests {
       .apply(springSecurity())
       .alwaysDo(print())
       .build();
+
+    waitIfPortIsUsed(mailHost, mailPort, 30);
 
     wiser = new Wiser();
     wiser.setHostname(mailHost);

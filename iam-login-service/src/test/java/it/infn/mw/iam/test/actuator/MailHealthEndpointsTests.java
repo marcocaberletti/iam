@@ -1,5 +1,6 @@
 package it.infn.mw.iam.test.actuator;
 
+import static it.infn.mw.iam.test.TestUtils.waitIfPortIsUsed;
 import static java.lang.String.format;
 import static org.hamcrest.Matchers.equalTo;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
@@ -25,12 +26,10 @@ import org.springframework.web.context.WebApplicationContext;
 import org.subethamail.wiser.Wiser;
 
 import it.infn.mw.iam.IamLoginService;
-import net.jcip.annotations.NotThreadSafe;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @SpringApplicationConfiguration(classes = {IamLoginService.class})
 @WebAppConfiguration
-@NotThreadSafe
 public class MailHealthEndpointsTests {
 
   private static final String ADMIN_USERNAME = "admin";
@@ -63,6 +62,8 @@ public class MailHealthEndpointsTests {
       .apply(springSecurity())
       .alwaysDo(print())
       .build();
+
+    waitIfPortIsUsed(mailHost, mailPort, 30);
 
     wiser = new Wiser();
     wiser.setHostname(mailHost);
