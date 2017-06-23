@@ -1,8 +1,10 @@
 package it.infn.mw.iam.test.notification;
 
-import static it.infn.mw.iam.core.IamRegistrationRequestStatus.APPROVED;
-import static it.infn.mw.iam.core.IamRegistrationRequestStatus.CONFIRMED;
-import static it.infn.mw.iam.core.IamRegistrationRequestStatus.REJECTED;
+import static it.infn.mw.iam.test.RegistrationUtils.approveRequest;
+import static it.infn.mw.iam.test.RegistrationUtils.confirmRegistrationRequest;
+import static it.infn.mw.iam.test.RegistrationUtils.createRegistrationRequest;
+import static it.infn.mw.iam.test.RegistrationUtils.deleteUser;
+import static it.infn.mw.iam.test.RegistrationUtils.rejectRequest;
 import static it.infn.mw.iam.test.TestUtils.waitIfPortIsUsed;
 import static java.lang.String.format;
 import static org.hamcrest.Matchers.containsString;
@@ -13,45 +15,34 @@ import static org.hamcrest.Matchers.startsWith;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
-import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+
+import javax.mail.MessagingException;
 
 import org.apache.commons.lang.time.DateUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.SpringApplicationConfiguration;
-import org.springframework.http.MediaType;
-import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
+import org.springframework.boot.test.WebIntegrationTest;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
-import org.springframework.test.context.web.WebAppConfiguration;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.context.WebApplicationContext;
 import org.subethamail.wiser.Wiser;
 import org.subethamail.wiser.WiserMessage;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import it.infn.mw.iam.IamLoginService;
 import it.infn.mw.iam.api.account.password_reset.PasswordResetController;
 import it.infn.mw.iam.api.account.password_reset.PasswordResetService;
 import it.infn.mw.iam.core.IamDeliveryStatus;
-import it.infn.mw.iam.core.IamRegistrationRequestStatus;
 import it.infn.mw.iam.notification.MockTimeProvider;
 import it.infn.mw.iam.notification.NotificationProperties;
 import it.infn.mw.iam.notification.NotificationService;
@@ -59,13 +50,11 @@ import it.infn.mw.iam.persistence.model.IamEmailNotification;
 import it.infn.mw.iam.persistence.repository.IamEmailNotificationRepository;
 import it.infn.mw.iam.registration.PersistentUUIDTokenGenerator;
 import it.infn.mw.iam.registration.RegistrationRequestDto;
-import it.infn.mw.iam.test.core.CoreControllerTestSupport;
-import it.infn.mw.iam.test.util.WithMockOAuthUser;
+import it.infn.mw.iam.test.TestUtils;
 
 @RunWith(SpringJUnit4ClassRunner.class)
-@SpringApplicationConfiguration(classes = {IamLoginService.class, CoreControllerTestSupport.class})
-@WebAppConfiguration
-@Transactional
+@SpringApplicationConfiguration(classes = IamLoginService.class)
+@WebIntegrationTest
 public class NotificationTests {
 
   @Autowired
@@ -97,26 +86,19 @@ public class NotificationTests {
   private MockTimeProvider timeProvider;
 
   @Autowired
-  private WebApplicationContext context;
-
-  @Autowired
   private PersistentUUIDTokenGenerator generator;
-
-  @Autowired
-  private ObjectMapper objectMapper;
-
-  private MockMvc mvc;
 
   private Wiser wiser;
 
+
+  @BeforeClass
+  public static void init() {
+
+    TestUtils.initRestAssured();
+  }
+
   @Before
-  public synchronized void setUp() throws InterruptedException {
-
-    mvc = MockMvcBuilders.webAppContextSetup(context)
-      .apply(springSecurity())
-      .alwaysDo(print())
-      .build();
-
+  public void setUp() throws InterruptedException {
     waitIfPortIsUsed(mailHost, mailPort, 30);
 
     wiser = new Wiser();
@@ -126,23 +108,20 @@ public class NotificationTests {
   }
 
   @After
-  public synchronized void tearDown() throws InterruptedException {
-
+  public void tearDown() throws InterruptedException {
     wiser.stop();
-
     notificationRepository.deleteAll();
-
     if (wiser.getServer().isRunning()) {
       Assert.fail("Fake mail server is still running after stop!!");
     }
   }
 
   @Test
-  public void testSendEmails() throws Exception {
+  public void testSendEmails() throws MessagingException {
 
     String username = "test_user";
 
-    createRegistrationRequest(username);
+    RegistrationRequestDto reg = createRegistrationRequest(username);
     notificationService.sendPendingNotifications();
 
     assertThat(wiser.getMessages(), hasSize(1));
@@ -157,14 +136,15 @@ public class NotificationTests {
     for (IamEmailNotification elem : queue) {
       assertThat(elem.getDeliveryStatus(), equalTo(IamDeliveryStatus.DELIVERED));
     }
+
+    deleteUser(reg.getAccountId());
   }
 
   @Test
-  public void testDisableNotificationOption() throws Exception {
-
+  public void testDisableNotificationOption() {
     String username = "test_user";
 
-    createRegistrationRequest(username);
+    RegistrationRequestDto reg = createRegistrationRequest(username);
 
     properties.setDisable(true);
     notificationService.sendPendingNotifications();
@@ -176,11 +156,12 @@ public class NotificationTests {
       assertThat(elem.getDeliveryStatus(), equalTo(IamDeliveryStatus.DELIVERED));
     }
 
+    deleteUser(reg.getAccountId());
     properties.setDisable(false);
   }
 
   @Test
-  public void testSendMultipleNotifications() throws Exception {
+  public void testSendMultipleNotifications() {
 
     int count = 3;
     List<RegistrationRequestDto> requestList = new ArrayList<>();
@@ -198,6 +179,10 @@ public class NotificationTests {
     for (IamEmailNotification elem : queue) {
       assertThat(elem.getDeliveryStatus(), equalTo(IamDeliveryStatus.DELIVERED));
     }
+
+    for (RegistrationRequestDto elem : requestList) {
+      deleteUser(elem.getAccountId());
+    }
   }
 
   @Test
@@ -208,10 +193,9 @@ public class NotificationTests {
   }
 
   @Test
-  public void testDeliveryFailure() throws Exception {
-
+  public void testDeliveryFailure() {
     String username = "test_user";
-    createRegistrationRequest(username);
+    RegistrationRequestDto reg = createRegistrationRequest(username);
 
     wiser.stop();
 
@@ -221,13 +205,13 @@ public class NotificationTests {
     for (IamEmailNotification elem : queue) {
       assertThat(elem.getDeliveryStatus(), equalTo(IamDeliveryStatus.DELIVERY_ERROR));
     }
+
+    deleteUser(reg.getAccountId());
   }
 
-  @Test
-  @WithMockOAuthUser(clientId = "registration-client",
-      scopes = {"registration:read", "registration:write"})
-  public void testApproveFlowNotifications() throws Exception {
 
+  @Test
+  public void testApproveFlowNotifications() throws MessagingException {
     String username = "test_user";
 
     RegistrationRequestDto reg = createRegistrationRequest(username);
@@ -262,13 +246,12 @@ public class NotificationTests {
 
     assertThat(message.getMimeMessage().getSubject(),
         equalTo(properties.getSubject().get("activated")));
+
+    deleteUser(reg.getAccountId());
   }
 
   @Test
-  @WithMockOAuthUser(clientId = "registration-client",
-      scopes = {"registration:read", "registration:write"})
-  public void testRejectFlowNotifications() throws Exception {
-
+  public void testRejectFlowNotifications() throws MessagingException {
     String username = "test_user";
 
     RegistrationRequestDto reg = createRegistrationRequest(username);
@@ -301,11 +284,10 @@ public class NotificationTests {
   }
 
   @Test
-  public void testCleanOldMessages() throws Exception {
-
+  public void testCleanOldMessages() {
     String username = "test_user";
 
-    createRegistrationRequest(username);
+    RegistrationRequestDto reg = createRegistrationRequest(username);
     notificationService.sendPendingNotifications();
     assertThat(wiser.getMessages(), hasSize(1));
 
@@ -314,13 +296,14 @@ public class NotificationTests {
 
     notificationService.clearExpiredNotifications();
 
+    deleteUser(reg.getAccountId());
+
     int count = notificationRepository.countAllMessages();
     assertEquals(0, count);
   }
 
   @Test
-  public void testEveryMailShouldContainSignature() throws Exception {
-
+  public void testEveryMailShouldContainSignature() throws MessagingException, IOException {
     String signature = String.format("The %s registration service", organisationName);
 
     String username = "test_user";
@@ -337,14 +320,17 @@ public class NotificationTests {
       String content = message.getMimeMessage().getContent().toString();
       assertThat(content, containsString(signature));
     }
+
+    deleteUser(reg.getAccountId());
   }
 
   @Test
-  public void testConfirmMailShouldContainsConfirmationLink() throws Exception {
+  public void testConfirmMailShouldContainsConfirmationLink()
+      throws MessagingException, IOException {
 
     String username = "test_user";
 
-    createRegistrationRequest(username);
+    RegistrationRequestDto reg = createRegistrationRequest(username);
     String confirmationKey = generator.getLastToken();
 
     String confirmURL = format("%s/registration/verify/%s", baseUrl, confirmationKey);
@@ -356,10 +342,13 @@ public class NotificationTests {
     assertThat(message.getMimeMessage().isMimeType("text/plain"), is(true));
     String content = message.getMimeMessage().getContent().toString();
     assertThat(content, containsString(confirmURL));
+
+    deleteUser(reg.getAccountId());
   }
 
   @Test
-  public void testActivationMailShouldContainsResetPasswordLink() throws Exception {
+  public void testActivationMailShouldContainsResetPasswordLink()
+      throws MessagingException, IOException {
 
     String username = "test_user";
 
@@ -379,14 +368,17 @@ public class NotificationTests {
     assertThat(message.getMimeMessage().isMimeType("text/plain"), is(true));
     String content = message.getMimeMessage().getContent().toString();
     assertThat(content, containsString(resetPasswordUrl));
+
+    deleteUser(reg.getAccountId());
   }
 
   @Test
-  public void testAdminNotificationMailShouldContainsDashboardLink() throws Exception {
+  public void testAdminNotificationMailShouldContainsDashboardLink()
+      throws MessagingException, IOException {
 
     String username = "test_user";
 
-    createRegistrationRequest(username);
+    RegistrationRequestDto reg = createRegistrationRequest(username);
     String confirmationKey = generator.getLastToken();
     confirmRegistrationRequest(confirmationKey);
 
@@ -399,10 +391,12 @@ public class NotificationTests {
     assertThat(message.getMimeMessage().isMimeType("text/plain"), is(true));
     String content = message.getMimeMessage().getContent().toString();
     assertThat(content, containsString(dashboardUrl));
+
+    deleteUser(reg.getAccountId());
   }
 
   @Test
-  public void testPasswordResetMailContainsUsername() throws Exception {
+  public void testPasswordResetMailContainsUsername() throws MessagingException, IOException {
 
     String username = "test_user";
 
@@ -420,63 +414,7 @@ public class NotificationTests {
     assertThat(message.getMimeMessage().isMimeType("text/plain"), is(true));
     String content = message.getMimeMessage().getContent().toString();
     assertThat(content, containsString(username));
-  }
 
-  private RegistrationRequestDto createRegistrationRequest(String username) throws Exception {
-
-    String email = username + "@example.org";
-    RegistrationRequestDto request = new RegistrationRequestDto();
-    request.setGivenname("Test");
-    request.setFamilyname("User");
-    request.setEmail(email);
-    request.setUsername(username);
-    request.setNotes("Some short notes...");
-    request.setPassword("password");
-
-    // @formatter:off
-    String response = mvc
-      .perform(post("/registration/create").contentType(MediaType.APPLICATION_JSON)
-        .content(objectMapper.writeValueAsString(request)))
-      .andExpect(status().isOk())
-      .andReturn()
-      .getResponse()
-      .getContentAsString();
-    // @formatter:on
-
-    return objectMapper.readValue(response, RegistrationRequestDto.class);
-  }
-
-  private void confirmRegistrationRequest(String confirmationKey) throws Exception {
-
-    // @formatter:off
-    mvc.perform(get("/registration/confirm/{token}", confirmationKey))
-      .andExpect(status().isOk())
-      .andExpect(jsonPath("$.status", equalTo(CONFIRMED.name())));
-    // @formatter:on
-  }
-
-  protected RegistrationRequestDto approveRequest(String uuid) throws Exception {
-
-    return requestDecision(uuid, APPROVED);
-  }
-
-  protected RegistrationRequestDto rejectRequest(String uuid) throws Exception {
-
-    return requestDecision(uuid, REJECTED);
-  }
-
-  private RegistrationRequestDto requestDecision(String uuid, IamRegistrationRequestStatus decision)
-      throws Exception {
-
-    // @formatter:off
-    String response = mvc
-        .perform(post("/registration/{uuid}/{decision}", uuid, decision.name())
-          .with(SecurityMockMvcRequestPostProcessors.user("admin").roles("ADMIN", "USER")))
-        .andExpect(status().isOk())
-        .andReturn()
-        .getResponse()
-        .getContentAsString();
-    // @formatter:on
-    return objectMapper.readValue(response, RegistrationRequestDto.class);
+    deleteUser(reg.getAccountId());
   }
 }
