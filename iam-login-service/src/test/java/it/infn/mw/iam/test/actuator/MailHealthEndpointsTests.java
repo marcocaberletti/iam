@@ -25,10 +25,12 @@ import org.springframework.web.context.WebApplicationContext;
 import org.subethamail.wiser.Wiser;
 
 import it.infn.mw.iam.IamLoginService;
+import net.jcip.annotations.NotThreadSafe;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @SpringApplicationConfiguration(classes = {IamLoginService.class})
 @WebAppConfiguration
+@NotThreadSafe
 public class MailHealthEndpointsTests {
 
   private static final String ADMIN_USERNAME = "admin";
@@ -54,16 +56,13 @@ public class MailHealthEndpointsTests {
   private MockMvc mvc;
   private Wiser wiser;
 
-  // private int timeoutInSecs = 30;
-
   @Before
-  public void setup() throws InterruptedException {
+  public synchronized void setup() throws InterruptedException {
+
     mvc = MockMvcBuilders.webAppContextSetup(context)
       .apply(springSecurity())
       .alwaysDo(print())
       .build();
-
-    // waitIfPortIsUsed(mailHost, mailPort, timeoutInSecs);
 
     wiser = new Wiser();
     wiser.setHostname(mailHost);
@@ -72,7 +71,8 @@ public class MailHealthEndpointsTests {
   }
 
   @After
-  public void teardown() {
+  public synchronized void teardown() {
+
     wiser.stop();
     if (wiser.getServer().isRunning()) {
       Assert.fail("Fake mail server is still running after stop!!");
@@ -81,6 +81,7 @@ public class MailHealthEndpointsTests {
 
   @Test
   public void testMailHealthEndpointWithSmtp() throws Exception {
+
     // @formatter:off
     mvc.perform(get(mailEndpointPath))
       .andExpect(status().isOk())
@@ -92,6 +93,7 @@ public class MailHealthEndpointsTests {
   @Test
   @WithMockUser(username = USER_USERNAME, roles = {USER_ROLE})
   public void testMailHealthEndpointWithSmtpAsUser() throws Exception {
+
     // @formatter:off
     mvc.perform(get(mailEndpointPath))
       .andExpect(status().isOk())
@@ -104,6 +106,7 @@ public class MailHealthEndpointsTests {
   @Test
   @WithMockUser(username = ADMIN_USERNAME, roles = {ADMIN_ROLE})
   public void testMailHealthEndpointWithSmtpAsAdmin() throws Exception {
+
     // @formatter:off
     mvc.perform(get(mailEndpointPath))
       .andExpect(status().isOk())

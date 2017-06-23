@@ -60,11 +60,13 @@ import it.infn.mw.iam.registration.PersistentUUIDTokenGenerator;
 import it.infn.mw.iam.registration.RegistrationRequestDto;
 import it.infn.mw.iam.test.core.CoreControllerTestSupport;
 import it.infn.mw.iam.test.util.WithMockOAuthUser;
+import net.jcip.annotations.NotThreadSafe;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @SpringApplicationConfiguration(classes = {IamLoginService.class, CoreControllerTestSupport.class})
 @WebAppConfiguration
 @Transactional
+@NotThreadSafe
 public class NotificationTests {
 
   @Autowired
@@ -109,13 +111,12 @@ public class NotificationTests {
   private Wiser wiser;
 
   @Before
-  public void setUp() throws InterruptedException {
+  public synchronized void setUp() throws InterruptedException {
+
     mvc = MockMvcBuilders.webAppContextSetup(context)
       .apply(springSecurity())
       .alwaysDo(print())
       .build();
-
-    // waitIfPortIsUsed(mailHost, mailPort, 30);
 
     wiser = new Wiser();
     wiser.setHostname(mailHost);
@@ -124,7 +125,8 @@ public class NotificationTests {
   }
 
   @After
-  public void tearDown() throws InterruptedException {
+  public synchronized void tearDown() throws InterruptedException {
+
     wiser.stop();
 
     notificationRepository.deleteAll();
@@ -158,6 +160,7 @@ public class NotificationTests {
 
   @Test
   public void testDisableNotificationOption() throws Exception {
+
     String username = "test_user";
 
     createRegistrationRequest(username);
@@ -205,6 +208,7 @@ public class NotificationTests {
 
   @Test
   public void testDeliveryFailure() throws Exception {
+
     String username = "test_user";
     createRegistrationRequest(username);
 
@@ -218,11 +222,11 @@ public class NotificationTests {
     }
   }
 
-
   @Test
   @WithMockOAuthUser(clientId = "registration-client",
       scopes = {"registration:read", "registration:write"})
   public void testApproveFlowNotifications() throws Exception {
+
     String username = "test_user";
 
     RegistrationRequestDto reg = createRegistrationRequest(username);
@@ -263,6 +267,7 @@ public class NotificationTests {
   @WithMockOAuthUser(clientId = "registration-client",
       scopes = {"registration:read", "registration:write"})
   public void testRejectFlowNotifications() throws Exception {
+
     String username = "test_user";
 
     RegistrationRequestDto reg = createRegistrationRequest(username);
@@ -296,6 +301,7 @@ public class NotificationTests {
 
   @Test
   public void testCleanOldMessages() throws Exception {
+
     String username = "test_user";
 
     createRegistrationRequest(username);
@@ -313,6 +319,7 @@ public class NotificationTests {
 
   @Test
   public void testEveryMailShouldContainSignature() throws Exception {
+
     String signature = String.format("The %s registration service", organisationName);
 
     String username = "test_user";
@@ -439,6 +446,7 @@ public class NotificationTests {
   }
 
   private void confirmRegistrationRequest(String confirmationKey) throws Exception {
+
     // @formatter:off
     mvc.perform(get("/registration/confirm/{token}", confirmationKey))
       .andExpect(status().isOk())
@@ -447,15 +455,18 @@ public class NotificationTests {
   }
 
   protected RegistrationRequestDto approveRequest(String uuid) throws Exception {
+
     return requestDecision(uuid, APPROVED);
   }
 
   protected RegistrationRequestDto rejectRequest(String uuid) throws Exception {
+
     return requestDecision(uuid, REJECTED);
   }
 
   private RegistrationRequestDto requestDecision(String uuid, IamRegistrationRequestStatus decision)
       throws Exception {
+
     // @formatter:off
     String response = mvc
         .perform(post("/registration/{uuid}/{decision}", uuid, decision.name())
