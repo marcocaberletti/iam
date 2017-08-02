@@ -52,7 +52,7 @@ pipeline {
   
           withCredentials([string(credentialsId: '630f8e6c-0d31-4f96-8d82-a1ef536ef059', variable: 'GITHUB_ACCESS_TOKEN')]) {
             withSonarQubeEnv{
-              sh """mvn clean -U sonar:sonar \\
+              sh """mvn clean -U compile sonar:sonar \\
                 -Dsonar.analysis.mode=preview \\
                 -Dsonar.github.pullRequest=${env.CHANGE_ID} \\
                 -Dsonar.github.repository=${organization}/${repo} \\
